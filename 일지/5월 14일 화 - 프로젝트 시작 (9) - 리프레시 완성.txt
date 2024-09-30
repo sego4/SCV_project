@@ -1,0 +1,80 @@
+5월 14일 화 → ※ ▶ ◈ ∴ 🫡
+
+-----------------------------------------------------------------
+inet 192.168.0.65에 있는 cctv 영상을 가져와서 cctv_frame.html에 띄우려면 어떻게 해야할까요?
+
+192.168.0.65에 위치한 CCTV 영상을 가져와서 cctv_frame.html에 표시하려면 어떻게 해야 합니까
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Page</title>
+
+</head>
+<body>
+    <h1>CCTV Page</h1>
+
+    <!-- 사용자 이름과 접속 메시지 출력 -->
+    <div>
+        <p style="display: inline;">Welcome, User님, 접속 중 입니다.</p>
+    </div>
+
+    <!-- CCTV 영상 플레이어 -->
+    <video width="800" height="450" controls>
+        <source src="http://192.168.0.65/cctv_stream" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+</body>
+</html>
+
+>> 위의 코딩대로~
+
+http://192.168.0.65/cctv_stream은 CCTV가 영상을 스트리밍하는 주소로 변경되어야한다.
+
+----
+> 링크를 눌렀을 시 index.html로 이어지고, cctv_frame.html파일에서 제공되는 영상에서 특정 구간으로 이동되도록 코딩을 하고 싶습니다. 이동되는 구간은 3:49로 구현되길 바랍니다.
+
+특정 구간으로 이동하는 링크를 생성하려면 HTML의 <a> 태그를 사용하여 링크를 만들고, 
+링크의 href 속성에는 해당 구간의 시간을 지정하는 것이 일반적입니다. 또한, 링크를 클릭했을 때 해당 시간으로 영상이 이동하도록 JavaScript를 사용하여 구현할 수 있습니다.
+
+아래는 테이블에 링크를 추가하고, 링크를 클릭했을 때 영상이 특정 구간으로 이동하는 예제 코드
+
+위의 코드에서 id가 "cctv-video"로 설정된 <video> 태그가 있습니다. 이 코드를 사용하면 JavaScript에서 해당 영상 요소를 video 변수로 참조할 수 있습니다. 이후에는 JavaScript에서 video 변수를 사용하여 영상 요소에 대한 작업을 수행할 수 있습니다.
+
+아래는 링크를 클릭할 때 index.html 파일로 이동하는 코드입니다:
+... 코드
+
+위의 코드에서 href="index.html" 부분은 링크의 목적지를 index.html 파일로 설정합니다. 또한, onclick="seekToTime('{{ log.timeInSeconds }}'); return false;" 부분은 링크를 클릭했을 때 JavaScript 함수인 seekToTime을 호출하고, 해당 시간으로 영상을 이동시킵니다. 마지막으로 return false;는 기본 이벤트 동작을 취소하여 링크 클릭 시 페이지 이동을 막습니다. 이렇게 함으로써 링크 클릭 시 index.html 파일로 이동하고 동시에 영상이 특정 시간으로 이동하도록 설정됩니다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

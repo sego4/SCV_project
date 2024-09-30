@@ -1,0 +1,249 @@
+6월 3일 월 → ※ ▶ ◈ ∴ 🫡 ❤ …
+
+일단 구현을 해뒀다.
+
+이 다음엔 영상을 세 개까지 설정하도록 하자!
+그 다음은...
+index_frame.html을 관리하도록 하자!
+검출한 내용으로 logs가 출력되도록 해야하는데 어떻게 만져봐야 할까?
+
+----------------------------------------------------------------------------------
+우선적으로 저번주에 하지 못했던 cctv.html의 한 브라우저 안에서 두 프레임으로 나눠서
+>> cctv.html에서 cctv_frame.html과 index_frame.html 구분하고자 한다.
+
+코드에서는 cctv.html을 렌더링하고 있지만 실제로 cctv_frame.html과 index_frame.html을 로드하고 있습니다.  이러한 로드를 위해서는 cctv.html에서 프레임을 나누는 <iframe> 요소가 있어야 합니다. 
+※ 현재 코드에서는 cctv.html에 <iframe> 요소가 없으므로 프레임이 나누어지지 않습니다. ???
+
+
+▶ 그렇다면 현재 app.py를 봤을 때, login.html 창에서 로그인을 하면 cctv_frame.html로 넘어가는건가요?
+> app.py에서 /login 엔드포인트에 대한 POST 요청 처리 부분을 살펴보면 로그인이 성공하면 /cctv_frame 엔드포인트로 리디렉션합니다.
+
+즉, 사용자가 로그인에 성공하면 세션에 사용자 이름을 저장하고, /cctv_frame 엔드포인트로 리디렉션하여 CCTV 프레임 페이지를 표시합니다. 따라서 로그인 후에는 cctv_frame.html이 로드됩니다.
+
+>> 제공된 app.py에서 /login 엔드포인트에서 로그인이 성공하면 /cctv_frame 엔드포인트로 리디렉션되는 부분은 확인되지 않습니다. /login 엔드포인트에서 로그인이 성공하면 세션에 사용자 이름을 저장하고 cctv_frame.html을 렌더링하는 것으로 보입니다.
+
+따라서 /cctv_frame으로의 명시적인 리디렉션 코드는 없습니다. 로그인 후에는 사용자가 수동으로 /cctv_frame 엔드포인트로 이동해야 합니다.
+
+리디렉션을 명시적으로 수행하려면 /login 엔드포인트에서 로그인이 성공한 경우 redirect(url_for('cctv_frame'))와 같이 리디렉션을 추가해야 합니다.
+
+"
+# 기본 경로로 접근할 때 로그인 페이지 렌더링
+@app.route('/')
+def home():
+    return render_template('login.html')
+
+# 로그인 페이지 렌더링
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('login.html')
+
+# CCTV 페이지 렌더링
+@app.route('/cctv_page', methods=['GET'])
+def cctv_page():
+    return render_template('cctv.html')
+
+# 로그인 처리
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 사용자 인증
+    cursor.execute("SELECT * FROM PLAYERS WHERE id = ? AND password = ?", (username, password))
+    user = cursor.fetchone()
+    
+    if user:
+        user_name = user['NAME']
+        session['username'] = user_name  # 세션에 사용자 이름 저장
+        return redirect(url_for('cctv_frame'))  # CCTV 페이지로 리디렉트
+    else:
+        return "Invalid username or password"  # 로그인 실패 메시지 출력
+    
+    conn.close()
+"
+
+주어진 코드에서 /login 엔드포인트에 GET과 POST 메서드로 라우팅되는 세 개의 핸들러가 있습니다.
+
+/login 엔드포인트에 GET 메서드로 접근하면 login_page() 함수가 실행되어 로그인 페이지를 렌더링합니다.
+/login 엔드포인트에 POST 메서드로 접근하면 login() 함수가 실행되어 사용자가 제출한 로그인 정보를 처리합니다.
+/ (기본 경로)로 접근하면 home() 함수가 실행되어 로그인 페이지를 렌더링합니다.
+로그인 페이지에서 사용자가 유효한 자격 증명을 제출하면 login() 함수가 실행되어 세션에 사용자 이름을 저장하고 /cctv_frame으로 리디렉션합니다.
+
+그러나 지금까지 제공된 코드에서는 로그인 후에 직접적인 /cctv_frame으로의 리디렉션 코드가 없었습니다. 제가 이전에 보여드린 코드를 사용하여 로그인 후에 자동으로 /cctv_frame으로 리디렉션하도록 추가할 수 있습니다.
+
+사진_: 역시 이 부분이 문제였다!!!
+
+그리고 cctv.html은 다음과 같이 수정됩니다.
+... 코드_:
+이제 사용자가 로그인하면 /cctv_page로 리디렉션되고, 해당 페이지에서는 cctv_frame과 index_frame의 두 개의 iframe이 나타나게 됩니다.
+
+---- 3교시_)
+
+> logs - index_frame.html 프레임을 보는데 있어서~
+"
+# 로그 정보 가져오기
+def get_logs():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT date, occurrence_time, incident FROM cctvlog")
+    logs = cursor.fetchall()
+    conn.close()
+    return logs
+
+# 특정 날짜의 로그 정보 가져오기
+def get_logs_by_date(date):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT occurrence_time, incident FROM cctvlog WHERE date = ?", (date,))
+    logs = cursor.fetchall()
+    conn.close()
+    return logs
+"
+를 통해 SQLite3에 데이터를 저장해 두었다.
+ 그런데 임의적으로 저장해둔 것이지 실제로 어떠한 역할이 없었다.
+yolo 객체 검출 모델로드를 통해서 검출된 best.pt에 내용이 날짜를 이름(date)으로 저장하고 
+발생 시간(occurrence_time)과 어떤 사건(incidnet)이 발생한건지를 검출하고 DB에 데이터가 저장되도록 하고 싶습니다. 
+
+▶ 로그 정보를 가져오고 특정 날짜의 로그 정보를 가져오는 함수는 이미 작성되어 있고, 이제 yolo 객체 검출 모델을 사용하여 검출된 결과를 기반으로 로그를 생성하고 DB에 저장하는 부분을 구현해야 합니다. 여기에는 몇 가지 단계가 필요합니다:
+
+YOLO 객체 검출 모델을 로드합니다.
+동영상 스트림에서 프레임을 읽고 객체를 검출합니다.
+검출된 객체의 정보를 기반으로 로그를 생성합니다.
+생성된 로그를 데이터베이스에 저장합니다.
+아래는 이러한 과정을 수행하는 간단한 코드 예시입니다:
+... 코드_:
+위 코드는 가이드 역할을 하며 실제 데이터베이스 및 YOLO 모델과의 통합 및 프레임 처리 방식에 따라 수정해야 할 수 있습니다. 필요에 따라 객체 검출 결과를 기반으로 더 복잡한 로그 생성 및 DB 저장 로직을 구현할 수 있습니다.
+
+
+---- 4교시_)
+영상의 시간을 조절 할 수 있었으면 좋겠다.
+
+sub 1, 2, 3 영상들을 모달 스타일을 통해 화면을 띄우고 닫는 기능은 있으니~
+
+주어진 cctv_frame.html 브라우저 창 프레임에서 동영상 시간을 조절할 수 있었으면 좋겠습니다.
+
+>> 동영상 시간을 조절하려면 일반적으로 HTML5 <video> 요소의 currentTime 속성을 사용하여 가능합니다.
+
+여러 가지 방법 중 하나는 사용자가 동영상을 일시 중지하고, 다시 재생할 때 시간을 다시 설정하는 것입니다. 예를 들어 사용자가 모달을 닫고 다시 열 때마다 시간을 리셋할 수 있습니다.
+... 코드_:
+
+이렇게 하면 사용자가 모달을 열 때마다 동영상이 처음부터 시작됩니다. 필요에 따라 다른 시간으로 설정하려면 showModal() 함수의 currentTime 속성을 조절하면 됩니다.
+... 코드_:
+
+그러나 이렇게 하면 모달을 열 때마다 시작 시간을 지정해야 합니다. 이 방법으로 동영상 시간을 조절할 수 있습니다.
+
+---- 오후 교시_)
+▶ app.py
+가져온 영상 파일의 색상이 깨지는 문제는 보통 색상 공간 변환이나 프레임의 순서와 관련된 문제일 수 있습니다. CCTV 스트림을 처리할 때, 색상 공간 변환과 관련된 부분을 확인해야 합니다.
+
+cv2.cvtColor를 사용하여 색상 공간을 변환할 때, 올바른 변환 코드를 사용해야 합니다. 일반적으로 OpenCV에서는 BGR 형식을 사용하고, Matplotlib이나 다른 이미지 처리 라이브러리에서는 RGB 형식을 사용합니다. 따라서 이 과정에서 색상 공간 변환을 정확하게 해야 합니다.
+
+다음은 코드를 수정한 예제입니다:
+... 코드_:
+
+이 코드에서 주요 변경 사항은 다음과 같습니다:
+
+plots 이미지가 RGB 형식이라고 가정하고, 이를 BGR 형식으로 변환 (cv2.cvtColor(plots, cv2.COLOR_RGB2BGR)).
+cv2.imencode 함수가 실패했을 경우를 처리 (if not ret: continue).
+위의 수정된 코드가 색상 공간 문제를 해결해 줄 것입니다. 만약 여전히 문제가 발생한다면, results[0].plot()이 실제로 RGB 이미지를 반환하는지 확인하고, 그에 따라 색상 공간 변환을 조정해야 합니다.
+
+▶ predict.py
+코드에서 동영상 색상 문제를 해결하고, 객체 검출 결과를 저장하는 과정에서 몇 가지 중요한 점을 확인해야 합니다. 아래는 주어진 코드에 몇 가지 개선 사항을 반영한 것입니다.
+
+모델 결과를 처리할 때 색상 공간 변환을 확인합니다.
+SQLite 데이터베이스에 검출 결과를 올바르게 저장합니다.
+... 코드_:
+주요 변경 사항:
+색상 공간 변환:
+
+results[0].plot() 함수가 RGB 형식을 반환한다고 가정하고, 이를 BGR 형식으로 변환하기 위해 cv2.cvtColor를 사용합니다.
+객체 검출 결과 저장:
+
+데이터베이스에 검출된 객체의 레이블과 발생 시간을 저장합니다.
+self.labels 리스트를 정의하여 각 레이블에 해당하는 이름을 저장합니다. 예: self.labels = ['person', 'car', ...].
+데이터베이스 연결 및 삽입:
+
+SQLite 데이터베이스에 연결하여 검출된 객체 정보를 삽입합니다.
+데이터베이스에 대한 변경 사항을 커밋하고 연결을 종료합니다.
+이제 객체 검출과 관련된 결과를 저장하고, 색상 문제를 해결한 동영상 파일을 생성할 수 있을 것입니다. 필요에 따라 self.labels 리스트를 알맞은 레이블 이름으로 채워주세요.
+
+----6교시_)
+이제 CCTVStream 클래스에서 프레임을 생성하는 코드가 RGB와 BGR 변환을 올바르게 처리하도록 수정되었습니다. 이를 통해 색상 문제가 해결될 것입니다. 아래는 업데이트된 CCTVStream 클래스입니다:
+... 코드_:
+주요 변경 사항:
+1. RGB/BGR 변환:
+-프레임을 predictor.model에 입력하기 전에 BGR 형식에서 RGB 형식으로 변환합니다.
+-모델의 결과 이미지를 다시 RGB에서 BGR로 변환하여 OpenCV로 처리합니다.
+
+이 변경 사항은 모델의 입력과 출력 형식이 RGB 형식임을 가정한 것입니다. 이를 통해 색상이 올바르게 표시될 것입니다.
+
+전체 통합 예시:
+... 코드_:
+
+이제 프레임의 색상 문제는 해결되었을 것입니다. 이 코드를 통해 CCTV 스트림에서 실시간 객체 감지를 수행하면서 올바른 색상으로 비디오를 출력할 수 있습니다.
+
+----
+여기서 모달 영상이 크기를 키워 출력이 되는 부분을 수정해야 한다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

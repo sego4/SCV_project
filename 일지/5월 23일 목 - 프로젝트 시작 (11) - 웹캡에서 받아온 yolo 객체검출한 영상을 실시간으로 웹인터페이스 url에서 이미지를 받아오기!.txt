@@ -1,0 +1,289 @@
+5월 23일 목 → ※ ▶ ◈ ∴ 🫡 ❤
+
+-----------------------------------------------------------------
+Predict.py를 통해 이미지를 (객체)검출하고 그 검출한 이미지가 cctv_frame.html에서 띄우고 싶습니다!
+그러려면 app.py에서 임포트나 코딩을 통해서 라우트를 해주고 (렌더링은 무슨 관련이?)
+Javascript 코드를 화면을 띄울 .html 파일에 코딩을 해줘야할것 같습니다. 맞습니까?
+
+
+네, 맞습니다. 이미지를 객체 검출하고 그 이미지를 cctv_frame.html에 띄우기 위해서는 다음과 같은 단계를 따라야 합니다.
+
+1. 객체 검출 코드 (predict.py) 준비:
+- predict.py 파일에서 이미지를 입력받아 객체를 검출하고, 결과 이미지를 저장하거나 반환하는 함수를 작성합니다.
+
+# predict.py
+import cv2
+
+def detect_objects(input_image_path, output_image_path):
+    # 객체 검출 로직 (예: OpenCV를 사용한 객체 검출)
+    image = cv2.imread(input_image_path)
+    # 객체 검출을 수행하고 결과 이미지를 저장
+    cv2.imwrite(output_image_path, image)
+    return output_image_path
+
+2. Flask 애플리케이션 (app.py) 설정:
+- Flask를 사용하여 웹 애플리케이션을 설정하고, 이미지를 업로드하고 객체를 검출한 결과를 반환하는 라우트를 만듭니다.
+
+# app.py
+from flask import Flask, request, render_template, send_file
+import os
+from predict import detect_objects
+
+app = Flask(__name__)
+
+UPLOAD_FOLDER = 'uploads/'
+RESULT_FOLDER = 'results/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['RESULT_FOLDER'] = RESULT_FOLDER
+
+@app.route('/')
+def index():
+    return render_template('cctv_frame.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return 'No file part'
+    file = request.files['file']
+    if file.filename == '':
+        return 'No selected file'
+    if file:
+        input_image_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(input_image_path)
+        
+        output_image_path = os.path.join(app.config['RESULT_FOLDER'], 'result_' + file.filename)
+        detect_objects(input_image_path, output_image_path)
+        
+        return render_template('cctv_frame.html', result_image=output_image_path)
+
+@app.route('/results/<filename>')
+def send_result_file(filename):
+    return send_file(os.path.join(app.config['RESULT_FOLDER'], filename))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+3. HTML 파일 (cctv_frame.html) 준비:
+- HTML 파일에서 업로드 폼과 결과 이미지를 보여줄 코드를 작성합니다. JavaScript를 사용하여 폼 제출 시 이미지를 서버로 업로드하고, 결과 이미지를 화면에 띄웁니다.
+
+<!-- cctv_frame.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Frame</title>
+</head>
+<body>
+    <h1>Upload an Image for Object Detection</h1>
+    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*">
+        <button type="submit">Upload</button>
+    </form>
+
+    <div id="result">
+        {% if result_image %}
+            <h2>Detected Objects:</h2>
+            <img src="{{ url_for('send_result_file', filename=result_image.split('/')[-1]) }}" alt="Result Image">
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var formData = new FormData(this);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.text())
+            .then(html => {
+                document.body.innerHTML = html;
+            });
+        });
+    </script>
+</body>
+</html>
+
+일단은 기본적인 내용이고 여기서 세부 내용은 내가 수정해야한다.
+
+위 코드들은 다음과 같은 순서로 작동!
+
+1. 사용자가 웹 페이지 ("cctv_frame.html")에서 이미지를 업로드합니다.
+
+2. 이미지는 Flask 서버로 전송됩니다. ('/upload' 엔드포인트로 끝맺음 해야한다).
+
+3. 서버는 이미지를 저장하고, 'predict.py'에서 객체 검출을 수행하여 결과 이미지를 저장합니다.
+
+4. 결과 이미지는 "cctv_frame.html"에서 보여집니다. - 출력과 구현을 의미!
+
+5. JavaScript를 사용하여 폼을 제출하고, 서버의 응답을 받아 페에지를 동적으로 업데이트합니다.
+
+> 이렇게 하면 객체 검출된 이미지를 웹페이지에 띄울 수 있습니다.
+
+
+
+
+>>> ---- 3교시
+
+모델 경로를 C:\Users\602-13\k로 설정하려면 YOLO 클래스 초기화 시 경로를 해당 경로로 변경하면 됩니다. 이 변경 사항을 반영한 predict.py 코드는 다음과 같습니다:
+
+import cv2
+from ultralytics import YOLO
+import datetime
+import os
+
+class Predict:
+    def __init__(self):
+        self.size = (960, 540)
+        # 모델 경로 수정
+        self.model = YOLO('C:/Users/602-13/k/weights/best.pt')
+        self.labels = []
+        with open("label.txt", "r", encoding="utf-8") as f:
+            self.labels = [line.strip() for line in f.readlines()]
+
+    def detect_objects(self, video_path):
+        cap = cv2.VideoCapture(video_path)
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        date = datetime.date.today()
+        directory = "static/results"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        filename = f"{date.strftime('%Y-%m-%d')}_yolo.avi"
+        filepath = os.path.join(directory, filename)
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(filepath, fourcc, fps, self.size)
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            resized_frame = cv2.resize(frame, self.size)
+            results = self.model(resized_frame)
+            plots = results[0].plot()
+            bgr_plots = cv2.cvtColor(plots, cv2.COLOR_RGB2BGR)
+            out.write(bgr_plots)
+
+        cap.release()
+        out.release()
+        return filepath
+
+# Instantiate the class to be used in app.py
+predict_instance = Predict()
+
+ 이제 이 predict.py를 사용하는 app.py 파일을 설정해 보겠습니다. 
+Flask 애플리케이션이 predict.py의 기능을 사용하여 객체 검출을 수행하고 결과를 HTML 페이지에 표시하도록 하겠습니다.
+
+app.py 설정
+app.py는 Flask를 사용하여 웹 서버를 설정하고, /detect 경로에서 객체 검출을 수행하여 결과를 반환하는 역할을 합니다.
+
+...
+cctv_frame.html 설정
+결과 동영상을 표시하는 HTML 파일을 설정합니다.
+
+...
+
+이제 'app.py'와 'cctv_frame.html' 파일이 'predict.py'에서 객체 검출을 수행한 결과 동영상을 표시할 수 있도록 설정되었습니다. Flask 애플리케이션을 실행하고 브라우저에서 테스트하여 정상적으로 작동하는지 확인하십시오.
+
+
+---- 4교시
+
+<app.py를 내가 갖고 있는 파일에 녹아들도록 해주자!>
+ 주어진 app.py 코드를 기반으로 객체 검출 기능을 추가하는 방법을 설명하겠습니다. 이 과정에서는 사용자가 업로드한 동영상 파일을 predict.py의 Predict 클래스를 통해 처리하고, 그 결과를 보여주는 라우트를 추가합니다.
+
+app.py 업데이트
+1. 필요한 모듈 가져오기: Predict 클래스 인스턴스를 가져오기 위해 predict.py를 가져옵니다.
+2. 파일 업로드 라우트 추가: 사용자가 동영상을 업로드하고, 검출 결과를 보여주는 라우트를 추가합니다.
+3. 결과 페이지 라우트 추가: 검출 결과 동영상을 보여주는 라우트를 추가합니다.
+이 변경 사항을 반영한 app.py 코드는 다음과 같습니다:
+
+
+Ultralytics YOLO 라이브러리가 설치되어 있는지 확인하려면 pip install ultralytics 명령을 사용하여 설치할 수 있습니다.
+
+
+해당 오류는 PyTorch가 필요한 라이브러리 파일을 찾지 못해서 발생한 것입니다. Windows 환경에서 PyTorch 및 그 의존성을 제대로 설치했는지 확인해야 합니다.
+
+해결 방법
+CUDA 설치 확인 및 환경 변수 설정:
+
+PyTorch는 GPU 지원을 위해 CUDA를 사용합니다. 시스템에 맞는 CUDA Toolkit을 설치하고 환경 변수를 올바르게 설정했는지 확인합니다.
+1. CUDA 설치 후, PATH 환경 변수에 CUDA의 bin 디렉토리를 추가해야 합니다. 예를 들어, C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2\bin과 같은 경로를 추가합니다.
+
+2. PyTorch 재설치:
+
+PyTorch와 관련된 문제가 있을 수 있으므로 PyTorch를 재설치해봅니다. 아래 명령어를 사용하여 설치합니다. pip을 사용하고 있으며, torch 및 torchvision을 함께 설치합니다.
+
+3. 모든 의존성 업데이트:
+
+requirements.txt 파일에 있는 모든 라이브러리를 최신 버전으로 업데이트합니다. 이를 위해 다음 명령어를 사용합니다.
+>> pip install -r requirements.txt --upgrade
+
+----
+
+해결했다.
+
+오류 메시지에서 dill 모듈이 필요하지만 찾을 수 없다는 내용이 나옵니다. 이 문제는 환경 설정이나 경로 문제로 인해 발생할 수 있습니다. 아래는 이 문제를 해결하기 위한 단계입니다:
+
+
+1. dill 재설치:
+때때로 패키지를 재설치하면 문제가 해결될 수 있습니다. dill을 제거한 후 다시 설치해 보세요:
+- pip uninstall dill
+
+2. 올바른 환경 확인:
+dill이 설치된 동일한 Python 환경에서 Flask 앱을 실행하고 있는지 확인하세요. 현재 환경에서 설치된 패키지 목록을 확인하려면 다음 명령어를 실행하세요:
+- pip list 
+를 통해서 삭제되었는지 확인
+
+3. dill 설치 후 확인! 
+
+4. Python 셸에서 가져오기 테스트:
+동일한 환경에서 Python 셸을 열고 dill을 가져올 수 있는지 테스트하세요:
+- import dill
+
+5. 가상 환경 사용:
+가상 환경을 사용하여 의존성을 격리하는 것이 좋습니다. 다음 명령어로 가상 환경을 설정하세요:
+
+python -m venv myenv
+
+- `myenv\Scripts\activate`
+- pip install flask dill torch ultralytics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

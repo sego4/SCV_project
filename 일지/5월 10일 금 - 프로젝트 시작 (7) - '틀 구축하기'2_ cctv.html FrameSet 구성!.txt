@@ -1,0 +1,146 @@
+5월 10일 금 → ※ ▶ ◈ ∴ 🫡
+
+app.py에서 cctv 페이지 렌더링을 통해서 cctv.html에 연결하고 
+ cctv.html에서 한 브라우저에서 두 프레임으로 나눠서 cctv_frame.html, index_frame.html를 띄우고 싶은 거다.
+
+
+>>> cctv.html파일을 한 브라우저에서 두 프레임으로 나눠서 cctv_frame.html, index_frame.html를 구현하는데 있어서 cctv.html 코딩에서 작성하는게 맞을까요? 아님 app.py에서 cctv_frame.html, index_frame.html이 연결되도록 하는게 맞을까요?
+
+→ 일반적으로 Flask 애플리케이션에서는 템플릿을 사용하여 HTML 페이지를 동적으로 생성합니다. 따라서 cctv.html을 생성하여 각각의 프레임을 정의하고, 각 프레임에 렌더링할 페이지를 지정하는 것이 일반적인 방식입니다.
+
+따라서 Flask 애플리케이션의 app.py에서는 각 페이지에 대한 라우트를 정의하고, 해당 페이지를 렌더링하는 템플릿을 설정하는 것이 좋습니다. 그런 다음 cctv.html에서는 각각의 프레임에 대한 소스를 지정하여 이 템플릿을 불러오도록 설정합니다.
+
+이를 위해 다음과 같은 절차를 따를 수 있습니다.
+
+1.Flask 애플리케이션의 app.py에서 각 페이지에 대한 라우트를 정의하고, 해당 페이지를 렌더링하는 템플릿을 설정합니다.
+2.cctv.html에서 각각의 프레임에 대한 소스를 지정하여 프레임으로 불러올 템플릿을 설정합니다.
+
+이러한 방식을 사용하면 각 페이지를 Flask 애플리케이션에서 동적으로 렌더링하여 프레임으로 불러올 수 있습니다.       
+
+----
+기존의 app.py에 추가하여 CCTV와 Index 페이지에 대한 라우트를 정의하고, 해당 페이지를 렌더링하는 템플릿을 설정하겠습니다.
+
+◈ login.html창에서 한 브라우저에서 두 프레임셋을 나타내는 cctv.html로 먼저 넘어가고 그 cctv.html에서 cctv_frame.html, index_frame.html이 두 프레이셋에 구현되도록 하려는 것입니다. 위 코딩은 그러한 결과와는 거리가 있어보입니다.
+----
+
+
+일단은 
+이제 템플릿 파일에 각 프레임에 대한 내용을 추가할 차례입니다. 
+예를 들어, cctv_frame.html은 CCTV 프레임을 나타내며, index_frame.html은 인덱스 프레임을 나타냅니다.
+
+템플릿 파일을 열고, 해당 프레임에 표시할 내용을 작성하면 됩니다. CCTV 프레임의 경우, CCTV 로그를 표시하는 테이블이 포함될 수 있습니다. 인덱스 프레임의 경우, 사용자의 이름과 로그를 표시하는 테이블이 포함될 수 있습니다.
+
+>> 그렇다고 한다면, cctv.html은 따로 라우트 정의하고, 해당 페이지를 렌더링한 뒤에
+ 각각의 프레임 cctv_frame.html, index_frame.html에 라우트 정의(app.py에)하고, 해당 페이지의 또 각각 렌더링하는 템플릿을 설정해야하지 않을까?
+
+---- 
+
+기존의 것.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Dashboard</title>
+</head>
+<frameset cols="50%, 50%">
+    <frame src="{{ url_for('cctv_frame') }}" name="cctv_frame">
+    <frame src="{{ url_for('index_frame') }}" name="index_frame">
+</frameset>
+</html>
+
+
+로그아웃 버튼 기능 추가!
+<style>
+        /* 로그아웃 버튼 스타일 */
+        #logout-btn {
+            position: fixed; /* 화면 상단 고정 */
+            top: 10px; /* 화면 상단으로부터의 거리 */
+            right: 10px; /* 화면 오른쪽으로부터의 거리 */
+            padding: 10px; /* 버튼 패딩 */
+            background-color: red; /* 배경색 */
+            color: white; /* 글자색 */
+            border: none; /* 테두리 없음 */
+            cursor: pointer; /* 포인터 모양 변경 */
+        }
+        /* 프레임 스타일 */
+        iframe {
+            width: 50%; /* 프레임 가로 크기 */
+            height: 100vh; /* 화면 전체 세로 크기 */
+            border: none; /* 테두리 없음 */
+        }
+    </style>
+</head>
+
+>> cctv.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Dashboard</title>
+    <style>
+        /* 로그아웃 버튼 스타일 */
+        #logout-btn {
+            position: fixed; /* 화면 상단 고정 */
+            top: 10px; /* 화면 상단으로부터의 거리 */
+            right: 10px; /* 화면 오른쪽으로부터의 거리 */
+            padding: 10px; /* 버튼 패딩 */
+            background-color: red; /* 배경색 */
+            color: white; /* 글자색 */
+            border: none; /* 테두리 없음 */
+            cursor: pointer; /* 포인터 모양 변경 */
+        }
+        /* 프레임 스타일 */
+        iframe {
+            width: 50%; /* 프레임 가로 크기 */
+            height: 100vh; /* 화면 전체 세로 크기 */
+            border: none; /* 테두리 없음 */
+        }
+    </style>
+</head>
+<body>
+
+<!-- CCTV 프레임 -->
+<iframe src="{{ url_for('cctv_frame') }}" name="cctv_frame"></iframe>
+
+<!-- 인덱스 프레임 -->
+<iframe src="{{ url_for('index_frame') }}" name="index_frame"></iframe>
+
+<!-- 로그아웃 버튼 -->
+<form id="logout-form" action="{{ url_for('logout') }}" method="GET">
+    <button id="logout-btn" type="submit">로그아웃</button>
+</form>
+
+<!-- JavaScript를 이용한 로그아웃 처리 -->
+<script>
+    // 로그아웃 버튼 클릭 시 로그아웃 처리
+    document.getElementById('logout-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // 기본 동작 방지
+        // 로그아웃 처리
+        fetch(this.action, {
+            method: this.method
+        }).then(response => {
+            if (response.redirected) {
+                // 로그아웃 후 리다이렉트할 URL 설정
+                window.location.href = '/login'; // 로그인 페이지로 이동
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+
+-----------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+

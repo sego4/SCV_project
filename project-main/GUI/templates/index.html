@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Frame Content</title>
+</head>
+<body id="body">
+    <h1>LOGS Page</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>CCTV</th>
+                <th>Date</th>
+                <th>Occurrence Time</th>
+                <th>Incident</th>
+            </tr>
+        </thead>
+        <tbody id="log-table-body">
+            <!-- Initial data will be loaded here -->
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.cctv }}</td>
+                <td><a href="#" id="videoLink" onclick="openVideo('{{ log.cctv }}', '{{ log.date }}', '{{ log.occurrence_time }}')">{{ log.date }}</a></td>
+                <td>{{ log.occurrence_time }}</td>
+                <td>{{ log.incident }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        // JSON 데이터를 받아와서 테이블을 업데이트하는 함수
+        function updateLogsFromJSON() {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var logs = JSON.parse(xhr.responseText);
+                        var logTableBody = document.getElementById('log-table-body');
+                        logTableBody.innerHTML = ''; // 기존 데이터를 삭제합니다.
+
+                        logs.forEach(function(log) {
+                            var row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${log.cctv}</td>
+                                <td><a href="#" onclick="openVideo('${log.cctv}', '${log.date}', '${log.occurrence_time}')">${log.date}</a></td>
+                                <td>${log.occurrence_time}</td>
+                                <td>${log.incident}</td>
+                            `;
+                            logTableBody.appendChild(row);
+                        });
+                    } else {
+                        console.error('Failed to fetch data from the server.');
+                    }
+                }
+            };
+            xhr.open('GET', '/logs/json', true);
+            xhr.send();
+        }
+
+        // HTML 텍스트를 받아와서 테이블을 업데이트하는 함수
+        function updateLogsFromHTML() {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var logTableBody = document.getElementById('log-table-body');
+                        logTableBody.innerHTML = xhr.responseText;
+                    } else {
+                        console.error('Failed to fetch data from the server.');
+                    }
+                }
+            };
+            xhr.open('GET', '/logs/html', true);
+            xhr.send();
+        }
+
+        // 비디오 링크를 열어 특정 시간대로 이동하는 함수
+        function openVideo(cctv, date, time) {
+            var video_name = cctv + '_' + date + "_yolo.avi";
+            var video_path = "./static/results/" + video_name;
+            var video_url = video_path + "#t=" + time;
+            window.open(video_url, "_blank");
+        }
+
+        // 5초마다 로그를 JSON 형식으로 업데이트
+        setInterval(updateLogsFromJSON, 5000);
+
+        // 페이지 로드 시 한번 로그를 HTML 형식으로 업데이트
+        window.onload = updateLogsFromHTML;
+    </script>
+</body>
+</html>
